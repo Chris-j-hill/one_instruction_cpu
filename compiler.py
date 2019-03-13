@@ -32,20 +32,25 @@ def main(): #Main method
     file_handler = open_file(path = input_args)   
     file_content = get_file_content(handler = file_handler) 
     raw_instructions = isolate_instructions(file_content = file_content)
-    full_instructions = replace_psudo_codes(instructions = raw_instructions)
+    
+    labels = get_labels(instructions = raw_instructions)
+    
+    full_instructions, labels = replace_psudo_codes(instructions = raw_instructions, labels = labels)
 
     # replace all variables with memory locations   
     variables, values = get_variables(instructions = full_instructions)
-    program = locate_variables(variables = variables, instructions = full_instructions)
-    
 
+    program = locate_variables(variables = variables, instructions = full_instructions)
+    program = replace_labels(prog = program, labels = labels)
     data = update_memory_locations(variables = variables, consts = values, prog = program)
+
+
     sanity_check_data(data = data, num_instructions = len(full_instructions))
 
-    print(data)
-
-    write_hex_file(data)
- 
+    print_to_console(data, variables, values)
+    #write_hex_file(data)
+  
+    
     
 def get_console_input():
     if (len(sys.argv)!=2):# If the input isn't "python compiler.py [filename]"
@@ -82,7 +87,27 @@ def isolate_instructions(file_content):
 
     return raw_instructions                        
 
-def replace_psudo_codes(instructions):
+
+def get_labels(instructions):
+     
+    labels = []
+    label_rows = []
+    i=0
+    
+    while(i < len(instructions)):
+        line = instructions[i]
+        if(len(line) == 1 and line[0].endswith(':')): #identify label
+            labels.append(line)
+            label_rows.append(i)
+            instructions.pop(i) 
+            i-=1
+        i+=1
+    
+    return [labels,label_rows]
+    
+    
+
+def replace_psudo_codes(instructions, labels):
     
     for i in range(0, len(instructions)):
         line = instructions[i]
@@ -96,6 +121,10 @@ def replace_psudo_codes(instructions):
             
         elif line[0] == "HALT":    
             new_line = halt_psudo_code(line)
+        elif line[0] == "JMP":
+            new_line = jmp_psudo_code(line)
+            
+            
         else:
             error_line(error_4)
             print(line)
@@ -103,17 +132,29 @@ def replace_psudo_codes(instructions):
         instructions[i] = new_line
     
     # allocate new lines for multi line replacements for psudo instructions    
-    i=0        
+    i=0
+            
     while(i<len(instructions)):
         line = instructions[i]
         if len(line)>instruction_length:
             new_line = line[instruction_length:len(line)]
             instructions[i] = line[0:instruction_length]           
             instructions.insert(i+1, new_line)
-        i+=1 
-    return instructions
+            labels = update_labels(i,labels)
+        i+=1   
+    return instructions, labels
 
 
+def update_labels(start_index, labels):
+    
+    index = labels[1]
+    i=0
+    for i in range(0,len(index)):
+        if index[i] > start_index:
+            index[i]+=1
+    
+    labels[1] = index
+    return labels
 
 
 def get_variables(instructions):
@@ -145,21 +186,33 @@ def get_variables(instructions):
             if variables.count(line[write_loc])==0:
                 variables.append(line[write_loc])
     
+    
     # confirm variables to be read from exist in above list   
     for row in range(0,len(instructions)):
         line = instructions[row]
         
-        #check reading variable that exists
-        if (line[read_loc].isdigit() == False and variables.count(line[read_loc])>0 and is_not_jump_ref(line[addr])):    
-            error_line(row)
+        #check reading variable exists
+        if (line[read_loc].isdigit() == False and       # is str
+            variables.count(line[read_loc]) == 0 and    # not in above
+            is_not_jump_ref(line[read_loc]) and         # not jump ref
+            is_not_dummy_var(line[read_loc]) and        # not dummy
+            is_not_label(line[read_loc])):              # not label  
+            
+            error_line(row) # is an error
             print(error_3)
             error = True
-                
-        if (line[addr].isdigit() == False and variables.count(line[addr])>0 and is_not_jump_ref(line[addr])):    
+             
+        if (line[addr].isdigit() == False and 
+            variables.count(line[addr]) == 0 and 
+            is_not_jump_ref(line[addr]) and 
+            is_not_dummy_var(line[addr]) and
+            is_not_label(line[addr])):
+            
             error_line(row)
             print(error_3)
             error = True
     
+        
     char_consts = len(variables)
     constants = 0   
     #replace constant with mem location
@@ -204,10 +257,26 @@ def locate_variables(variables, instructions):
         
     return program
 
-def update_memory_locations(variables, consts, prog):
+def replace_labels(prog, labels):
+    
+    names = labels[0]
+    index = labels[1]
+    for i in range(1, len(prog)):
+        element = prog[i]
+        if element.startswith('&'):
+            element = element[1:]+ ':'
+            for j in range(0, len(names)):
+                name = names[j]
+                if element == name[0]:
+                    prog[i] = str(index[j]*instruction_length)
+              
+    return prog
+
+
+def update_memory_locations(variables, consts,  prog):
     
     itterations = 0
-    
+
     #fill in constants at end of program
     for vals in np.arange(len(prog)-1, len(prog)-len(variables)-1, -1):
         if(vals > len(prog)- len(consts)-1):   #replacing consts
@@ -227,8 +296,9 @@ def update_memory_locations(variables, consts, prog):
             prog[vals] = vals
         elif prog[vals] == jump_ref[1]:
             prog[vals] = vals-3
-    
-        else : #is a variable name
+        
+        
+        elif prog[vals].isdigit() ==False : #is a variable name
             element = variables.index(prog[vals])
             prog[vals] = len(prog)-len(variables)+element
             
@@ -258,6 +328,20 @@ def sanity_check_data(data, num_instructions):
                     print((num_instructions-1)*3)
                     print(error_7) 
 
+def print_to_console(data, variables, values):
+    
+    num_constants = len(values)
+    num_variables = len(variables) - num_constants
+    num_instructions = len(data)- num_variables-1
+    
+    
+    instructions = data[1:num_instructions]
+    print('program')
+    for i in range(0, num_instructions-4, 3):
+        print(instructions[i:i+3])    
+    
+    print('variables')
+    print(variables)
 
 def write_hex_file(data):
     writefile = "hexOutput.hex"
@@ -298,12 +382,31 @@ def halt_psudo_code(line):
     line.append(jump_ref[1])
     return line
 
+def jmp_psudo_code(line):
+    line.append(line[1])
+    
+    line[0] = '#dummy_var'
+    line[1] = '#dummy_var'
+    return line
+
+
+
 def is_not_jump_ref(element):
     
     if jump_ref.count(element) !=0:
         return False
     else:
         return True
+
+def is_not_dummy_var(element):
+    
+    return element != '#dummy_var'
+    
+def is_not_label(element):
+    if element.startswith('&'):
+        return False
+    else:
+        return True    
 
 def error_line(error_line):
     print("Error on line: ", error_line)

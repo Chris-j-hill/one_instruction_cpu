@@ -48,7 +48,7 @@ def main(): #Main method
     sanity_check_data(data = data, num_instructions = len(full_instructions))
 
     print_to_console(data, variables, values)
-    #write_hex_file(data)
+    write_hex_file(data)
   
     
     
@@ -290,7 +290,7 @@ def update_memory_locations(variables, consts,  prog):
         if '_const' in str(prog[vals]):
             element = str(prog[vals])
             element = element[6:]   #the const number ('_const*')
-            prog[vals] = len(prog)-len(consts)+int(element)
+            prog[vals] = len(prog)-len(consts)+int(element)-1
          
         elif prog[vals] == jump_ref[0]:
             prog[vals] = vals
@@ -300,7 +300,7 @@ def update_memory_locations(variables, consts,  prog):
         
         elif prog[vals].isdigit() ==False : #is a variable name
             element = variables.index(prog[vals])
-            prog[vals] = len(prog)-len(variables)+element
+            prog[vals] = len(prog)-len(variables)+element-1
             
     for i in range(len(prog)-len(variables), len(prog)-len(consts)):    
         prog[i] = '0'
@@ -336,12 +336,19 @@ def print_to_console(data, variables, values):
     
     
     instructions = data[1:num_instructions]
-    print('program')
+    print('\nPROGRAM:\n')
+    print('Addr \t Instruction')
     for i in range(0, num_instructions-4, 3):
-        print(instructions[i:i+3])    
+        print(i, '\t' , instructions[i:i+3])    
     
-    print('variables')
-    print(variables)
+    print('\nVARIABLES:\n')
+    print('Starting addr', i+3, ':\t', variables)
+    
+    
+    print('\nCONSTANTS:\n')
+    print(values)
+    
+    
 
 def write_hex_file(data):
     writefile = "hexOutput.hex"
@@ -366,12 +373,35 @@ def sub_psudo_code(line):
     
     
 def add_psudo_code(line):
-    #set this correctly later
-    line = [line[1],line[2], jump_ref[0]]
+    """
+    original:
+    add a b
     
-    line.append(line[0])
-    line.append(line[1])
+    converted:
+    sub temp temp   # temp = 0
+    sub temp b      # temp = 0 - b
+    sub a temp      # a = a - (-b)
+        
+    """
+        
+    write_to = line[1] #a
+    read_from = line[2] #b
+    
+    #line 1
+    line[0] = '#temp'
+    line[1] = '#temp'
+    line[2] = jump_ref[0] 
+    
+    #line 2
+    line.append('#temp')
+    line.append(read_from)
     line.append(jump_ref[0])
+    
+    #line 3
+    line.append(write_to)
+    line.append(read_from)
+    line.append(jump_ref[0])
+    
     return line
 
 

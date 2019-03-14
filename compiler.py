@@ -124,10 +124,12 @@ def replace_psudo_codes(instructions, labels):
         elif line[0] == "JMP":
             new_line = jmp_psudo_code(line)
             
-            
+        elif line[0] == "LEQ":
+            new_line = leq_psudo_code(line)
         else:
             error_line(error_4)
             print(line)
+            sys.exit()
         
         instructions[i] = new_line
     
@@ -174,10 +176,11 @@ def get_variables(instructions):
     values = [] # array of constant values that were replaced
     
     error = False
+    #print(instructions)
     # first iterate through and make a list of locations to write result to
     for row in range(0,len(instructions)):
         line = instructions[row]
-        
+        print(line)
         if (line[write_loc].isdigit()):
             error_line(row)
             print(error_2)
@@ -379,8 +382,8 @@ def add_psudo_code(line):
     
     converted:
     sub temp temp   # temp = 0
-    sub temp b      # temp = 0 - b
-    sub a temp      # a = a - (-b)
+    sub temp b      # temp = 0 - b = -b
+    sub a temp      # a = a - temp = a-(-b)
         
     """
         
@@ -399,7 +402,7 @@ def add_psudo_code(line):
     
     #line 3
     line.append(write_to)
-    line.append(read_from)
+    line.append('#temp')
     line.append(jump_ref[0])
     
     return line
@@ -419,7 +422,62 @@ def jmp_psudo_code(line):
     line[1] = '#dummy_var'
     return line
 
+def leq_psudo_code(line):
+    """
+    original:
+    leq a b c
+    
+    converted:
+    # make copy of a and b to preserve values
+    sub temp temp       # temp = 0
+    sub temp2 temp2     # temp2 = 0
+    sub temp3 temp3     # temp3 = 0
+    
+    sub temp a          # temp = -a
+    sub temp2 a         # temp2 = -a
+    sub temp temp2      # temp = 0
+    sub temp temp2      # temp = a
+    
+    sub temp2 temp2     # temp2 = 0
+    sub temp3 b         # temp3 = -b
+    sub temp2 b         # temp2 = -b
+    sub temp3 temp2     # temp3 = 0
+    sub temp3 temp2     # temp3 = b
+       
+    #sub and jump
+    sub temp temp3 c
+    """
+    
+    
+    a = line[1]
+    b = line[2]
+    c = line[3]
+    new_line = []
+    
+     
+    new_line += sub_psudo_code(['SUB', '#temp', '#temp'])
+    new_line += sub_psudo_code(['SUB', '#temp2', '#temp2'])
+    new_line += sub_psudo_code(['SUB', '#temp3', '#temp3'])
+                                
+    new_line += sub_psudo_code(['SUB', '#temp', a])
+    new_line += sub_psudo_code(['SUB', '#temp2', a])
+    new_line += sub_psudo_code(['SUB', '#temp', '#temp2'])
+    new_line += sub_psudo_code(['SUB', '#temp', '#temp2'])
+                                
+    
+    new_line += sub_psudo_code(['SUB', '#temp2', '#temp2'])
+    new_line += sub_psudo_code(['SUB', '#temp3', b])
+    new_line += sub_psudo_code(['SUB', '#temp2', b])
+    new_line += sub_psudo_code(['SUB', '#temp3', '#temp2'])
+    new_line += sub_psudo_code(['SUB', '#temp3', '#temp2'])
+    
+    new_line += ['#temp', '#temp3', c]
+    
+    
+    return new_line
+    
 
+    
 
 def is_not_jump_ref(element):
     

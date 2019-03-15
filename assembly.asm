@@ -1,11 +1,8 @@
-sub c 1 # first instruction
-jmp &label
-add c c
-leq c 12 &label2
+sub c 9 # first instruction
+jez c 12 &label
 sub a 8
+sub b 10
 label:
-add b 2 # second instruction
+sub d 10
 sub c 4
-label2:
-label3:
 halt 

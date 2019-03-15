@@ -3,6 +3,16 @@
 
 import sys
 import numpy as np
+from psudo_codes import (sub_psudo_code,
+                        add_psudo_code,
+                        halt_psudo_code,
+                        jmp_psudo_code,
+                        jle_psudo_code,
+                        jlz_psudo_code,
+                        jez_psudo_code,
+                        jne_psudo_code,
+                        jump_ref)
+                        
 
 error_1 = "Error 1: wrong number of arguments"
 error_2 = "Error 2: trying to write to a constant, not a variable"
@@ -12,7 +22,6 @@ error_5 = "Error 5: tried to load a number out of bounds, make sure value betwee
 error_6 = "Error 6: jump location is not start of an instruction"
 error_7 = "Error 7: jump location is out of bounds"
 
-jump_ref = ['_next_addr', '_this_addr'] 
 
 
 
@@ -47,7 +56,7 @@ def main(): #Main method
 
     sanity_check_data(data = data, num_instructions = len(full_instructions))
 
-    print_to_console(data, variables, values)
+    print_to_console(data, variables, values, full_instructions)
     write_hex_file(data)
   
     
@@ -124,8 +133,18 @@ def replace_psudo_codes(instructions, labels):
         elif line[0] == "JMP":
             new_line = jmp_psudo_code(line)
             
-        elif line[0] == "LEQ":
-            new_line = leq_psudo_code(line)
+        elif line[0] == "JLE":
+            new_line = jle_psudo_code(line)
+        elif line[0] == "JLZ":
+            new_line = jlz_psudo_code(line)
+        elif line[0] == "JEZ":
+            new_line = jez_psudo_code(line)
+        elif line[0] == "JNE":
+            new_line = jne_psudo_code(line)
+        
+        
+            
+            
         else:
             error_line(error_4)
             print(line)
@@ -180,8 +199,8 @@ def get_variables(instructions):
     # first iterate through and make a list of locations to write result to
     for row in range(0,len(instructions)):
         line = instructions[row]
-        print(line)
-        if (line[write_loc].isdigit()):
+        
+        if (is_value(line[write_loc])):
             error_line(row)
             print(error_2)
             error = True
@@ -195,7 +214,7 @@ def get_variables(instructions):
         line = instructions[row]
         
         #check reading variable exists
-        if (line[read_loc].isdigit() == False and       # is str
+        if (is_value(line[read_loc])== False and       # is str
             variables.count(line[read_loc]) == 0 and    # not in above
             is_not_jump_ref(line[read_loc]) and         # not jump ref
             is_not_dummy_var(line[read_loc]) and        # not dummy
@@ -205,7 +224,7 @@ def get_variables(instructions):
             print(error_3)
             error = True
              
-        if (line[addr].isdigit() == False and 
+        if (is_value(line[addr]) == False and 
             variables.count(line[addr]) == 0 and 
             is_not_jump_ref(line[addr]) and 
             is_not_dummy_var(line[addr]) and
@@ -221,7 +240,7 @@ def get_variables(instructions):
     #replace constant with mem location
     for row in range(0,len(instructions)):
         line = instructions[row]
-        if line[read_loc].isdigit():
+        if is_value(line[read_loc]):
             if values.count(line[read_loc]) >0: #replaced this constant elsewhere
                 line[read_loc] = variables[char_consts+values.index(line[read_loc])]
             else:
@@ -230,7 +249,7 @@ def get_variables(instructions):
                 line[read_loc] = const_name(constants)
                 constants+=1
             
-        if line[addr].isdigit():
+        if is_value(line[addr]):
             if values.count(line[addr]) > 0: #replaced this constant elsewhere
                 line[addr] = variables[char_consts+values.index(line[addr])]
             else:
@@ -299,9 +318,11 @@ def update_memory_locations(variables, consts,  prog):
             prog[vals] = vals
         elif prog[vals] == jump_ref[1]:
             prog[vals] = vals-3
+        elif prog[vals].startswith('_plus'):
+            prog[vals] = vals+3*(int(prog[vals].lstrip('_plus'))-1)
         
         
-        elif prog[vals].isdigit() ==False : #is a variable name
+        elif is_value(prog[vals]) == False : #is a variable name
             element = variables.index(prog[vals])
             prog[vals] = len(prog)-len(variables)+element-1
             
@@ -331,18 +352,16 @@ def sanity_check_data(data, num_instructions):
                     print((num_instructions-1)*3)
                     print(error_7) 
 
-def print_to_console(data, variables, values):
+def print_to_console(data, variables, values, assembly):
     
-    num_constants = len(values)
-    num_variables = len(variables) - num_constants
-    num_instructions = len(data)- num_variables-1
-    
+    num_instructions = len(data)- len(variables)
     
     instructions = data[1:num_instructions]
     print('\nPROGRAM:\n')
-    print('Addr \t Instruction')
-    for i in range(0, num_instructions-4, 3):
-        print(i, '\t' , instructions[i:i+3])    
+    print('Addr \t Instruction    \t  Assembly')
+    
+    for i in range(0, num_instructions-1, 3):
+        print(i, '\t' , instructions[i:i+3], '   \t ', assembly[int(i/3)])    
     
     print('\nVARIABLES:\n')
     print('Starting addr', i+3, ':\t', variables)
@@ -370,113 +389,6 @@ def write_hex_file(data):
 
 def const_name(constant):
     return constant_value_prototype + str(constant)
-
-def sub_psudo_code(line):
-    return [line[1],line[2], jump_ref[0]]
-    
-    
-def add_psudo_code(line):
-    """
-    original:
-    add a b
-    
-    converted:
-    sub temp temp   # temp = 0
-    sub temp b      # temp = 0 - b = -b
-    sub a temp      # a = a - temp = a-(-b)
-        
-    """
-        
-    write_to = line[1] #a
-    read_from = line[2] #b
-    
-    #line 1
-    line[0] = '#temp'
-    line[1] = '#temp'
-    line[2] = jump_ref[0] 
-    
-    #line 2
-    line.append('#temp')
-    line.append(read_from)
-    line.append(jump_ref[0])
-    
-    #line 3
-    line.append(write_to)
-    line.append('#temp')
-    line.append(jump_ref[0])
-    
-    return line
-
-
-def halt_psudo_code(line):
-    
-    line[0] = '#dummy_var'
-    line.append('#dummy_var')
-    line.append(jump_ref[1])
-    return line
-
-def jmp_psudo_code(line):
-    line.append(line[1])
-    
-    line[0] = '#dummy_var'
-    line[1] = '#dummy_var'
-    return line
-
-def leq_psudo_code(line):
-    """
-    original:
-    leq a b c
-    
-    converted:
-    # make copy of a and b to preserve values
-    sub temp temp       # temp = 0
-    sub temp2 temp2     # temp2 = 0
-    sub temp3 temp3     # temp3 = 0
-    
-    sub temp a          # temp = -a
-    sub temp2 a         # temp2 = -a
-    sub temp temp2      # temp = 0
-    sub temp temp2      # temp = a
-    
-    sub temp2 temp2     # temp2 = 0
-    sub temp3 b         # temp3 = -b
-    sub temp2 b         # temp2 = -b
-    sub temp3 temp2     # temp3 = 0
-    sub temp3 temp2     # temp3 = b
-       
-    #sub and jump
-    sub temp temp3 c
-    """
-    
-    
-    a = line[1]
-    b = line[2]
-    c = line[3]
-    new_line = []
-    
-     
-    new_line += sub_psudo_code(['SUB', '#temp', '#temp'])
-    new_line += sub_psudo_code(['SUB', '#temp2', '#temp2'])
-    new_line += sub_psudo_code(['SUB', '#temp3', '#temp3'])
-                                
-    new_line += sub_psudo_code(['SUB', '#temp', a])
-    new_line += sub_psudo_code(['SUB', '#temp2', a])
-    new_line += sub_psudo_code(['SUB', '#temp', '#temp2'])
-    new_line += sub_psudo_code(['SUB', '#temp', '#temp2'])
-                                
-    
-    new_line += sub_psudo_code(['SUB', '#temp2', '#temp2'])
-    new_line += sub_psudo_code(['SUB', '#temp3', b])
-    new_line += sub_psudo_code(['SUB', '#temp2', b])
-    new_line += sub_psudo_code(['SUB', '#temp3', '#temp2'])
-    new_line += sub_psudo_code(['SUB', '#temp3', '#temp2'])
-    
-    new_line += ['#temp', '#temp3', c]
-    
-    
-    return new_line
-    
-
     
 
 def is_not_jump_ref(element):
@@ -491,10 +403,20 @@ def is_not_dummy_var(element):
     return element != '#dummy_var'
     
 def is_not_label(element):
-    if element.startswith('&'):
+    if element.startswith('&') or element.startswith('_plus'):
         return False
     else:
         return True    
+
+def is_value(element):
+    if element.isdigit():
+        return True
+    elif element.startswith('-'):
+        element = element[1:]
+        if element.isdigit():
+            return True
+    else:
+        return False
 
 def error_line(error_line):
     print("Error on line: ", error_line)

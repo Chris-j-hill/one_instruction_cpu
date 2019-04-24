@@ -23,19 +23,26 @@ error_6 = "Error 6: jump location is not start of an instruction"
 error_7 = "Error 7: jump location is out of bounds"
 
 
-
+test_file = "assembly.asm" # assembly file for testing complier in IDE
 
 write_loc = 0
 read_loc =1
 addr = 2
 instruction_length = 3
-
+display_size = 32   # matrix display dimensions = display_size*16
+num_sfr_mem_locations = display_size+1  # return value+display+size
 constant_value_prototype = "_const"
+
+debug = True
 
 def main(): #Main method
     
     # get file name from command line 
-    input_args = get_console_input()
+    if debug == False:    
+        input_args = get_console_input()
+    else:
+        input_args = test_file
+
     
     # get file, remove comments, remove spaces, replace psudo instructions
     file_handler = open_file(path = input_args)   
@@ -44,16 +51,19 @@ def main(): #Main method
     
     labels = get_labels(instructions = raw_instructions)
     
+    
     full_instructions, labels = replace_psudo_codes(instructions = raw_instructions, labels = labels)
 
     # replace all variables with memory locations   
     variables, values = get_variables(instructions = full_instructions)
 
+
     program = locate_variables(variables = variables, instructions = full_instructions)
+
     program = replace_labels(prog = program, labels = labels)
+
     data = update_memory_locations(variables = variables, consts = values, prog = program)
-
-
+    
     sanity_check_data(data = data, num_instructions = len(full_instructions))
 
     print_to_console(data, variables, values, full_instructions)
@@ -187,35 +197,48 @@ def get_variables(instructions):
     
     first this function makes a list of all the locations to be written to
     then checks all locations to read from are reasonable
-    then replaces constants with tempory palceholders
+    then replaces constants with tempory placeholders
+    
+    in order to account for the sfr values, which need to be located at the 
+    end of the program, when these keywords are found they are appended to a 
+    seperate array which is concatonated at the end
     
     """
     
     variables = []  # array of variables to be populated in memory
     values = [] # array of constant values that were replaced
-    
+    sfr_variables = [0]*num_sfr_mem_locations
     error = False
-    #print(instructions)
+    
+    
     # first iterate through and make a list of locations to write result to
     for row in range(0,len(instructions)):
         line = instructions[row]
         
-        if (is_value(line[write_loc])):
+        if (is_value(line[write_loc])): # error, cant write to a value
             error_line(row)
             print(error_2)
             error = True
-        else:
-            if variables.count(line[write_loc])==0:
+        
+        else: # check is variable is a sfr, and add to list
+            if "DISP_" in (line[write_loc]):
+                index = int(line[write_loc].replace('DISP_',''))
+                sfr_variables[index] = line[write_loc]
+            elif "RETURN" in (line[write_loc]):
+                sfr_variables[num_sfr_mem_locations-1] = line[write_loc]
+                  
+            elif variables.count(line[write_loc])==0:
                 variables.append(line[write_loc])
-    
     
     # confirm variables to be read from exist in above list   
     for row in range(0,len(instructions)):
         line = instructions[row]
         
         #check reading variable exists
-        if (is_value(line[read_loc])== False and       # is str
+        if (is_value(line[read_loc])== False and        # is str
             variables.count(line[read_loc]) == 0 and    # not in above
+            "DISP_" not in line[read_loc] and           # not disp sfr
+            "RETURN" not in line[read_loc] and          # not return sfr 
             is_not_jump_ref(line[read_loc]) and         # not jump ref
             is_not_dummy_var(line[read_loc]) and        # not dummy
             is_not_label(line[read_loc])):              # not label  
@@ -223,9 +246,12 @@ def get_variables(instructions):
             error_line(row) # is an error
             print(error_3)
             error = True
-             
+        
+        #same checks for addr 
         if (is_value(line[addr]) == False and 
             variables.count(line[addr]) == 0 and 
+            "DISP_" not in line[read_loc] and           
+            "RETURN" not in line[read_loc] and          
             is_not_jump_ref(line[addr]) and 
             is_not_dummy_var(line[addr]) and
             is_not_label(line[addr])):
@@ -236,15 +262,18 @@ def get_variables(instructions):
     
         
     char_consts = len(variables)
-    constants = 0   
-    #replace constant with mem location
+    constants = 0 
+    
+    
+    # replace constant with mem location
     for row in range(0,len(instructions)):
         line = instructions[row]
+        
         if is_value(line[read_loc]):
-            if values.count(line[read_loc]) >0: #replaced this constant elsewhere
+            if values.count(line[read_loc]) >0: #replaced this constant elsewhere, no need to inclde twice
                 line[read_loc] = variables[char_consts+values.index(line[read_loc])]
             else:
-                variables.append(const_name(constants))
+                variables.append(const_name(constants)) #adds _constX values
                 values.append(line[read_loc])
                 line[read_loc] = const_name(constants)
                 constants+=1
@@ -261,12 +290,15 @@ def get_variables(instructions):
     if error == True:
         sys.exit()
     
+       
+    variables = variables + sfr_variables #append list of variables with sfr variables
+        
     return variables, values
 
 
 def locate_variables(variables, instructions):
     
-    program = [len(instructions)*3+len(variables)] #program length is first element
+    program = [len(instructions)*3+len(variables)] # program length is first element
     
     for row in range (0,len(instructions)): 
         line = instructions[row]
@@ -283,8 +315,9 @@ def replace_labels(prog, labels):
     
     names = labels[0]
     index = labels[1]
-    for i in range(1, len(prog)):
+    for i in range(1, len(prog)-num_sfr_mem_locations):
         element = prog[i]
+
         if element.startswith('&'):
             element = element[1:]+ ':'
             for j in range(0, len(names)):
@@ -300,19 +333,17 @@ def update_memory_locations(variables, consts,  prog):
     itterations = 0
 
     #fill in constants at end of program
-    for vals in np.arange(len(prog)-1, len(prog)-len(variables)-1, -1):
-        if(vals > len(prog)- len(consts)-1):   #replacing consts
-            prog[vals] = consts[len(consts)-1-itterations]
-            
-            
+    for const_N in range(len(prog)-num_sfr_mem_locations-len(consts), len(prog)-num_sfr_mem_locations):   
+        prog[const_N] = consts[itterations]
         itterations+=1
     
-    #replace references to constants
+    #replace references to constants in main program
     for vals in range(1, len(prog)- len(variables)):   
-        if '_const' in str(prog[vals]):
+        
+        if '_const' in str(prog[vals]): 
             element = str(prog[vals])
             element = element[6:]   #the const number ('_const*')
-            prog[vals] = len(prog)-len(consts)+int(element)-1
+            prog[vals] = len(prog)-len(consts)+int(element)-1-num_sfr_mem_locations
          
         elif prog[vals] == jump_ref[0]:
             prog[vals] = vals
@@ -325,8 +356,17 @@ def update_memory_locations(variables, consts,  prog):
         elif is_value(prog[vals]) == False : #is a variable name
             element = variables.index(prog[vals])
             prog[vals] = len(prog)-len(variables)+element-1
+        
+        elif "DISP_" in prog[vals]: # set disp_ reference as desired mem location
+            prog[vals] = len(prog)- num_sfr_mem_locations+int(prog[vals].remove('DISP_',''))
             
-    for i in range(len(prog)-len(variables), len(prog)-len(consts)):    
+        elif "RETURN" in prog[vals]:
+            prog[vals] = len(prog)
+            
+    # set all variables to zero, insuring to leave constants un changed
+    for i in range(len(prog)-len(variables), len(prog)-len(consts)-num_sfr_mem_locations):    
+        prog[i] = '0'
+    for i in range(len(prog)-num_sfr_mem_locations, len(prog)):    
         prog[i] = '0'
     
     return prog
@@ -336,7 +376,7 @@ def sanity_check_data(data, num_instructions):
    
     
     for i in range(1, len(data)):
-       
+        
         if int(data[i]) < -32768 or int(data[i]) > 32767:  #value size error
            error_line(i)
            print(error_5)
@@ -417,6 +457,8 @@ def is_value(element):
             return True
     else:
         return False
+
+    
 
 def error_line(error_line):
     print("Error on line: ", error_line)

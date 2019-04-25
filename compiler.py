@@ -418,9 +418,11 @@ def write_hex_file(data):
     file.write("v2.0 raw\n\n")
     
     for i in range(0, len(data)):
-       
-       value = hex(int(data[i]))
-       value = value[2:]
+       if(int(data[i])>=0):
+           value = hex(int(data[i]))
+       else:
+           value = hex(int(data[i])+ 65536)
+       value = value[2:6]
        file.write(value)
        file.write('\n')
     file.close()

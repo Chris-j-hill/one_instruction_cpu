@@ -1,4 +1,4 @@
-sub c 9 # first instruction
+sub c -9 # first instruction
 jmp &label
 sub a 8
 sub b 10

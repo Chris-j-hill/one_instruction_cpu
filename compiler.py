@@ -9,8 +9,8 @@ from psudo_codes import (sub_psudo_code,
                         halt_psudo_code,
                         jmp_psudo_code,
                         jle_psudo_code,
-                        jlz_psudo_code,
-                        jez_psudo_code,
+                        jlt_psudo_code,
+                        jeq_psudo_code,
                         jne_psudo_code,
                         jump_ref)
                         
@@ -64,7 +64,7 @@ def main(): #Main method
     program = replace_labels(prog = program, labels = labels)
 
     data = update_memory_locations(variables = variables, consts = values, prog = program)
-    
+
     sanity_check_data(data = data, num_instructions = len(full_instructions))
 
     print_to_console(data, variables, values, full_instructions)
@@ -146,10 +146,10 @@ def replace_psudo_codes(instructions, labels):
             
         elif line[0] == "JLE":
             new_line = jle_psudo_code(line)
-        elif line[0] == "JLZ":
-            new_line = jlz_psudo_code(line)
-        elif line[0] == "JEZ":
-            new_line = jez_psudo_code(line)
+        elif line[0] == "JLT":
+            new_line = jlt_psudo_code(line)
+        elif line[0] == "JEQ":
+            new_line = jeq_psudo_code(line)
         elif line[0] == "JNE":
             new_line = jne_psudo_code(line)
         
@@ -246,6 +246,7 @@ def get_variables(instructions):
             
             error_line(row) # is an error
             print(error_3)
+            print(line)
             error = True
         
         #same checks for addr 
@@ -259,6 +260,7 @@ def get_variables(instructions):
             
             error_line(row)
             print(error_3)
+            print(line)
             error = True
     
         
@@ -378,7 +380,7 @@ def sanity_check_data(data, num_instructions):
     
     for i in range(1, len(data)):
         
-        if int(data[i]) < -32768 or int(data[i]) > 32767:  #value size error
+        if (int(data[i]) < -32768 or int(data[i]) > 32767):  #value size error
            error_line(i)
            print(error_5)
     

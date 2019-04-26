@@ -10,42 +10,59 @@ def sub_psudo_code(line):
     
 def add_psudo_code(line):
     """
+    add two numbers
+    
     original:
     add a b
     
     converted:
-    sub temp temp   # temp = 0
-    sub temp b      # temp = 0 - b = -b
-    sub a temp      # a = a - temp = a-(-b)
+    if b is constant
+        sub a -b
+    else     
+        sub temp temp   # temp = 0
+        sub temp b      # temp = 0 - b = -b
+        sub a temp      # a = a - temp = a-(-b)
         
     """
+    
+    if is_value(line[2]):
+        line[2] = '-'+line[2]
+        line = sub_psudo_code(line)
+
+    else:        
+        write_to = line[1] #a
+        read_from = line[2] #b
         
-    write_to = line[1] #a
-    read_from = line[2] #b
-    
-    #line 1
-    line[0] = '#temp'
-    line[1] = '#temp'
-    line[2] = jump_ref[0] 
-    
-    #line 2
-    line.append('#temp')
-    line.append(read_from)
-    line.append(jump_ref[0])
-    
-    #line 3
-    line.append(write_to)
-    line.append('#temp')
-    line.append(jump_ref[0])
-    
+        #line 1
+        line[0] = '#temp'
+        line[1] = '#temp'
+        line[2] = jump_ref[0] 
+        
+        #line 2
+        line.append('#temp')
+        line.append(read_from)
+        line.append(jump_ref[0])
+        
+        #line 3
+        line.append(write_to)
+        line.append('#temp')
+        line.append(jump_ref[0])
+        
     return line
 
 def set_psudo_code(line):
     
     new_line = sub_psudo_code(['SUB', line[1], line[1]])  # set destination location to zero
     
-    line[2] = '-'+line[2]    #invert value to write
-    new_line += sub_psudo_code(line) # set new value
+    #if we're writing a constant, it can be directly written to destingation
+    if is_value(line[2]):
+        line[2] = '-'+line[2]    #invert value to write
+        new_line += sub_psudo_code(line) # set new value
+    else:     
+        new_line += add_psudo_code(line) # dest+b = 0+b = b        
+        
+        
+        
     return new_line
     
 def halt_psudo_code(line):
@@ -64,8 +81,11 @@ def jmp_psudo_code(line):
 
 def jle_psudo_code(line):
     """
+    jump if less than or equal to
+    -> if (a<=b) goto c
+    
     original:
-    leq a b c
+    jle a b c
     
     converted:
     # make copy of a and b to preserve values
@@ -116,10 +136,13 @@ def jle_psudo_code(line):
     
     return new_line
     
-def jlz_psudo_code(line): 
+def jlt_psudo_code(line): 
     """
+    jump if less than or equal to
+    -> if (a<b) goto c
+        
     original:
-    jl a b c
+    jlz a b c
     
     converted:
     # make copy of a and b to preserve values
@@ -138,8 +161,8 @@ def jlz_psudo_code(line):
     sub temp3 temp     # temp3 = 0
     sub temp3 temp     # temp3 = b
     
-    #add one to temp3 -> a<=b == a<(b+1)
-    sub temp3 -1
+    #add one to temp3 -> a<b == a<=(b-1)
+    sub temp3 1
     
     #sub and jump
     sub temp temp3 c
@@ -169,16 +192,25 @@ def jlz_psudo_code(line):
     new_line += sub_psudo_code(['SUB', '#temp3', '#temp'])
     
     
-    new_line += sub_psudo_code(['SUB', '#temp3', '-1'])
+    new_line += sub_psudo_code(['SUB', '#temp3', '1'])
     new_line += ['#temp2', '#temp3', c]
     
     return new_line
     
 
 
-def jez_psudo_code(line):
+def jeq_psudo_code(line):
 
     """
+    jump if  a and b are equal
+    
+    -> if (a == b) goto c
+    implemented as:
+    -> if (a<b) togo temp
+    -> if (a>b) togo temp
+    -> goto c
+    -> temp:
+    
     original:
     jez a b c
     
@@ -199,17 +231,11 @@ def jez_psudo_code(line):
     sub temp3 temp2     # temp3 = 0
     sub temp3 temp2     # temp3 = b
     
-    
-    
-    #add one to temp3 -> a<=b == a<(b+1)
+    sub temp2 -1    # add 1 to temp values to avoid jump when subtraction =0
     sub temp3 -1
     
-    #sub and jump
-    sub temp temp3 _jump_past
-    
-    
-    sub temp3 2
-    sub temp3 temp _jump past
+    sub temp2 b _jump_past 
+    sub temp3 a _jump_past
     
     jmp c
     """
@@ -237,12 +263,12 @@ def jez_psudo_code(line):
     new_line += sub_psudo_code(['SUB', '#temp3', '#temp'])
     new_line += sub_psudo_code(['SUB', '#temp3', '#temp'])
     
+    new_line += sub_psudo_code(['SUB', '#temp2', '-1']) # only want to jump if less than  but alu does a<=b
+    new_line += sub_psudo_code(['SUB', '#temp3', '-1']) # if a==b will jump on a<b comparison so add 1
     
-    new_line += sub_psudo_code(['SUB', '#temp3', '-1'])
-    new_line += ['#temp2', '#temp3', '_plus4']
-    
-    new_line += sub_psudo_code(['SUB', '#temp3', '2'])
-    new_line += ['#temp3', '#temp2', '_plus2']
+                                
+    new_line += ['#temp2', b, '_plus3']
+    new_line += ['#temp3', a, '_plus2']
     
     new_line += jmp_psudo_code(['JMP', c])
     
@@ -272,16 +298,11 @@ def jne_psudo_code(line):
     sub temp3 temp2     # temp3 = 0
     sub temp3 temp2     # temp3 = b
     
-    
-    
-    #add one to temp3 -> a<=b == a<(b+1)
+    sub temp2 -1    # add 1 to temp values to avoid jump when subtraction =0
     sub temp3 -1
     
-    #sub and jump
-    sub temp temp3 c
-      
-    sub temp3 2
-    sub temp3 temp c
+    sub temp2 b c 
+    sub temp3 a c
     
     """
     
@@ -309,11 +330,22 @@ def jne_psudo_code(line):
     new_line += sub_psudo_code(['SUB', '#temp3', '#temp'])
     
     
-    new_line += sub_psudo_code(['SUB', '#temp3', '-1'])
-    new_line += ['#temp2', '#temp3', c]
-    
-    new_line += sub_psudo_code(['SUB', '#temp3', '2'])
-    new_line += ['#temp3', '#temp2', c]
+    new_line += sub_psudo_code(['SUB', '#temp2', '-1']) # only want to jump if less than  but alu does a<=b
+    new_line += sub_psudo_code(['SUB', '#temp3', '-1']) # if a==b will jump on a<b comparison so add 1
+                                    
+    new_line += ['#temp2', b, c]
+    new_line += ['#temp3', a, c]
     
     
     return new_line
+
+
+def is_value(element):
+    if element.isdigit():
+        return True
+    elif element.startswith('-'):
+        element = element[1:]
+        if element.isdigit():
+            return True
+    else:
+        return False

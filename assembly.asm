@@ -1,4 +1,4 @@
-set a 3
-mul a 3
+set a 17
+div a 0
 set return a
 halt

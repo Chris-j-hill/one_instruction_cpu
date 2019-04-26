@@ -15,6 +15,7 @@ from psudo_codes import (sub_psudo_code,
                         jgt_psudo_code,
                         jge_psudo_code,
                         mul_psudo_code,
+                        div_psudo_code,
                         jump_ref)
                         
 
@@ -141,7 +142,7 @@ def replace_psudo_codes(instructions, labels):
         elif line[0] == "SET":
             new_line = set_psudo_code(line)
                     
-        elif line[0] == "HALT":    
+        elif line[0] == "HALT":
             new_line = halt_psudo_code(line)
         elif line[0] == "JMP":
             new_line = jmp_psudo_code(line)
@@ -160,6 +161,8 @@ def replace_psudo_codes(instructions, labels):
             new_line = jgt_psudo_code(line)
         elif line[0] == "MUL":
             new_line = mul_psudo_code(line)
+        elif line[0] == "DIV":
+            new_line = div_psudo_code(line)
         
         
             

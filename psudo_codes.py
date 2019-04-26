@@ -54,12 +54,13 @@ def set_psudo_code(line):
     
     new_line = sub_psudo_code(['SUB', line[1], line[1]])  # set destination location to zero
     
-    #if we're writing a constant, it can be directly written to destingation
+    #if we're writing a constant, it can be directly written to destingation zero doesnt need further code
     if is_value(line[2]):
         if int(line[2])!=0:
             line[2] = '-'+line[2]    #invert value to write
-        new_line += sub_psudo_code(line) # set new value
-    else:     
+            new_line += sub_psudo_code(line) # set new value
+                    
+    elif is_value(line[2]) == False: # if its a variable add this    
         new_line += add_psudo_code(line) # dest+b = 0+b = b        
         
         
@@ -68,10 +69,11 @@ def set_psudo_code(line):
     
 def halt_psudo_code(line):
     
-    line[0] = '#dummy_var'
-    line.append('#dummy_var')
-    line.append(jump_ref[1])
-    return line
+    new_line = []
+    new_line = ['#dummy_var']
+    new_line += ['#dummy_var']
+    new_line += [jump_ref[1]]
+    return new_line
 
 def jmp_psudo_code(line):
     line.append(line[1])
@@ -330,11 +332,8 @@ def jge_psudo_code(line):
 
 def mul_psudo_code(line):
     
-    print(line[1])
-    print(line[2])
-    
     new_line = set_psudo_code(['SET', '#temp4', '0']) #set counter to 0
-    new_line = set_psudo_code(['SET', '#temp5', '0']) # product ans
+    new_line += set_psudo_code(['SET', '#temp5', '0']) # product ans
                                
     new_line += add_psudo_code(['ADD', '#temp4', '1'])       # increment counter
     new_line += add_psudo_code(['ADD', '#temp5', line[1]])   # add value to sum
@@ -345,6 +344,22 @@ def mul_psudo_code(line):
     new_line += set_psudo_code(['SET', line[1], '#temp5'])
                                 
     return new_line
+
+def  div_psudo_code(line):
+    
+    new_line = set_psudo_code(['SET', '#temp4', '0']) #set counter to 0
+    new_line += jne_psudo_code(['JNE', line[2], '0', '_plus2'])    # halt if div by zero attempted
+    new_line += halt_psudo_code('HALT')       
+                        
+    new_line += add_psudo_code(['ADD', '#temp4', '1'])      # increment counter
+    new_line += sub_psudo_code(['SUB', line[1], line[2]])   # subtract value
+                                
+    new_line += jle_psudo_code(['JLE', '0', line[1], '_plus-8'])  # relative jump 
+    new_line += sub_psudo_code(['SUB', '#temp4', '1'])
+    new_line += set_psudo_code(['SET', line[1], '#temp4'])
+                                
+    return new_line
+
 
 def is_value(element):
     if element.isdigit():

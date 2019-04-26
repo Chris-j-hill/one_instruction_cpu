@@ -1,6 +1,4 @@
-set a 1
-loop:
-add a 1
-jne a 4 &loop
+set a 3
+mul a 3
 set return a
 halt

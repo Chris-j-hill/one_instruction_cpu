@@ -56,7 +56,8 @@ def set_psudo_code(line):
     
     #if we're writing a constant, it can be directly written to destingation
     if is_value(line[2]):
-        line[2] = '-'+line[2]    #invert value to write
+        if int(line[2])!=0:
+            line[2] = '-'+line[2]    #invert value to write
         new_line += sub_psudo_code(line) # set new value
     else:     
         new_line += add_psudo_code(line) # dest+b = 0+b = b        
@@ -319,6 +320,31 @@ def jne_psudo_code(line):
        
     return new_line
 
+def jgt_psudo_code(line):
+    line = ['JTL', line[2], line[1], line[3]]
+    return jlt_psudo_code(line)
+    
+def jge_psudo_code(line):
+    line = ['JLE', line[2],line[1], line[3]]
+    return jle_psudo_code(line)
+
+def mul_psudo_code(line):
+    
+    print(line[1])
+    print(line[2])
+    
+    new_line = set_psudo_code(['SET', '#temp4', '0']) #set counter to 0
+    new_line = set_psudo_code(['SET', '#temp5', '0']) # product ans
+                               
+    new_line += add_psudo_code(['ADD', '#temp4', '1'])       # increment counter
+    new_line += add_psudo_code(['ADD', '#temp5', line[1]])   # add value to sum
+    
+    new_line += set_psudo_code(['SET', '#temp6', line[2]]) # copy second value for comparision
+    new_line += jgt_psudo_code(['JGT', '#temp6', '#temp4', '_plus-19'])  # relative jump 
+    
+    new_line += set_psudo_code(['SET', line[1], '#temp5'])
+                                
+    return new_line
 
 def is_value(element):
     if element.isdigit():

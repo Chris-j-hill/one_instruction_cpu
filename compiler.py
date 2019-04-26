@@ -12,6 +12,9 @@ from psudo_codes import (sub_psudo_code,
                         jlt_psudo_code,
                         jeq_psudo_code,
                         jne_psudo_code,
+                        jgt_psudo_code,
+                        jge_psudo_code,
+                        mul_psudo_code,
                         jump_ref)
                         
 
@@ -131,7 +134,6 @@ def replace_psudo_codes(instructions, labels):
     
     for i in range(0, len(instructions)):
         line = instructions[i]
-
         if line[0] == "SUB":
             new_line = sub_psudo_code(line)
         elif line[0] == "ADD":
@@ -152,6 +154,12 @@ def replace_psudo_codes(instructions, labels):
             new_line = jeq_psudo_code(line)
         elif line[0] == "JNE":
             new_line = jne_psudo_code(line)
+        elif line[0] == "JGE":
+            new_line = jge_psudo_code(line)
+        elif line[0] == "JGT":
+            new_line = jgt_psudo_code(line)
+        elif line[0] == "MUL":
+            new_line = mul_psudo_code(line)
         
         
             
@@ -173,7 +181,8 @@ def replace_psudo_codes(instructions, labels):
             instructions[i] = line[0:instruction_length]           
             instructions.insert(i+1, new_line)
             labels = update_labels(i,labels)
-        i+=1   
+        i+=1 
+        
     return instructions, labels
 
 

@@ -1,11 +1,5 @@
-sub c -9 # first instruction
-jmp &label
-sub a 8
-sub b 10
-sub disp_0 5
-sub disp_2 6
-sub return 13
-label:
-sub d 10
-sub c 4
-halt 
+set disp_0 15
+set disp_0 127
+set 
+set return 10
+halt

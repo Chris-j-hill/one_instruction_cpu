@@ -5,6 +5,7 @@ import sys
 import numpy as np
 from psudo_codes import (sub_psudo_code,
                         add_psudo_code,
+                        set_psudo_code,
                         halt_psudo_code,
                         jmp_psudo_code,
                         jle_psudo_code,
@@ -135,9 +136,9 @@ def replace_psudo_codes(instructions, labels):
             new_line = sub_psudo_code(line)
         elif line[0] == "ADD":
             new_line = add_psudo_code(line)
-        #elif line[0] == "ADDI":
-            #new_line = addi_psudo_code(line)
-            
+        elif line[0] == "SET":
+            new_line = set_psudo_code(line)
+                    
         elif line[0] == "HALT":    
             new_line = halt_psudo_code(line)
         elif line[0] == "JMP":

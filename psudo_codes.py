@@ -40,7 +40,14 @@ def add_psudo_code(line):
     
     return line
 
-
+def set_psudo_code(line):
+    
+    new_line = sub_psudo_code(['SUB', line[1], line[1]])  # set destination location to zero
+    
+    line[2] = '-'+line[2]    #invert value to write
+    new_line += sub_psudo_code(line) # set new value
+    return new_line
+    
 def halt_psudo_code(line):
     
     line[0] = '#dummy_var'

@@ -91,21 +91,14 @@ def jle_psudo_code(line):
     # make copy of a and b to preserve values
     sub temp temp       # temp = 0
     sub temp2 temp2     # temp2 = 0
-    sub temp3 temp3     # temp3 = 0
     
     sub temp a          # temp = -a
     sub temp2 a         # temp2 = -a
     sub temp temp2      # temp = 0
     sub temp temp2      # temp = a
-    
-    sub temp2 temp2     # temp2 = 0
-    sub temp3 b         # temp3 = -b
-    sub temp2 b         # temp2 = -b
-    sub temp3 temp2     # temp3 = 0
-    sub temp3 temp2     # temp3 = b
        
     #sub and jump
-    sub temp temp3 c
+    sub temp b c
     """
     
     
@@ -117,22 +110,13 @@ def jle_psudo_code(line):
      
     new_line += sub_psudo_code(['SUB', '#temp', '#temp'])
     new_line += sub_psudo_code(['SUB', '#temp2', '#temp2'])
-    new_line += sub_psudo_code(['SUB', '#temp3', '#temp3'])
                                 
     new_line += sub_psudo_code(['SUB', '#temp', a])
     new_line += sub_psudo_code(['SUB', '#temp2', a])
     new_line += sub_psudo_code(['SUB', '#temp', '#temp2'])
     new_line += sub_psudo_code(['SUB', '#temp', '#temp2'])
-                                
-    
-    new_line += sub_psudo_code(['SUB', '#temp2', '#temp2'])
-    new_line += sub_psudo_code(['SUB', '#temp3', b])
-    new_line += sub_psudo_code(['SUB', '#temp2', b])
-    new_line += sub_psudo_code(['SUB', '#temp3', '#temp2'])
-    new_line += sub_psudo_code(['SUB', '#temp3', '#temp2'])
-    
-    new_line += ['#temp', '#temp3', c]
-    
+
+    new_line += ['#temp', b, c]
     
     return new_line
     
@@ -183,8 +167,7 @@ def jlt_psudo_code(line):
     new_line += sub_psudo_code(['SUB', '#temp', a])
     new_line += sub_psudo_code(['SUB', '#temp2', '#temp'])
     new_line += sub_psudo_code(['SUB', '#temp2', '#temp'])
-                                
-    
+                
     new_line += sub_psudo_code(['SUB', '#temp', '#temp'])
     new_line += sub_psudo_code(['SUB', '#temp3', b])
     new_line += sub_psudo_code(['SUB', '#temp', b])
@@ -255,7 +238,9 @@ def jeq_psudo_code(line):
     new_line += sub_psudo_code(['SUB', '#temp', a])
     new_line += sub_psudo_code(['SUB', '#temp2', '#temp'])
     new_line += sub_psudo_code(['SUB', '#temp2', '#temp'])
-                                
+    
+    new_line += sub_psudo_code(['SUB', '#temp2', '-1']) 
+    new_line += ['#temp2', b, '_plus9']
     
     new_line += sub_psudo_code(['SUB', '#temp', '#temp'])
     new_line += sub_psudo_code(['SUB', '#temp3', b])
@@ -263,11 +248,8 @@ def jeq_psudo_code(line):
     new_line += sub_psudo_code(['SUB', '#temp3', '#temp'])
     new_line += sub_psudo_code(['SUB', '#temp3', '#temp'])
     
-    new_line += sub_psudo_code(['SUB', '#temp2', '-1']) # only want to jump if less than  but alu does a<=b
-    new_line += sub_psudo_code(['SUB', '#temp3', '-1']) # if a==b will jump on a<b comparison so add 1
+    new_line += sub_psudo_code(['SUB', '#temp3', '-1'])
     
-                                
-    new_line += ['#temp2', b, '_plus3']
     new_line += ['#temp3', a, '_plus2']
     
     new_line += jmp_psudo_code(['JMP', c])
@@ -321,8 +303,10 @@ def jne_psudo_code(line):
     new_line += sub_psudo_code(['SUB', '#temp', a])
     new_line += sub_psudo_code(['SUB', '#temp2', '#temp'])
     new_line += sub_psudo_code(['SUB', '#temp2', '#temp'])
-                                
     
+    new_line += sub_psudo_code(['SUB', '#temp2', '-1']) 
+    new_line += ['#temp2', b, c]
+                 
     new_line += sub_psudo_code(['SUB', '#temp', '#temp'])
     new_line += sub_psudo_code(['SUB', '#temp3', b])
     new_line += sub_psudo_code(['SUB', '#temp', b])
@@ -330,13 +314,9 @@ def jne_psudo_code(line):
     new_line += sub_psudo_code(['SUB', '#temp3', '#temp'])
     
     
-    new_line += sub_psudo_code(['SUB', '#temp2', '-1']) # only want to jump if less than  but alu does a<=b
-    new_line += sub_psudo_code(['SUB', '#temp3', '-1']) # if a==b will jump on a<b comparison so add 1
-                                    
-    new_line += ['#temp2', b, c]
+    new_line += sub_psudo_code(['SUB', '#temp3', '-1']) 
     new_line += ['#temp3', a, c]
-    
-    
+       
     return new_line
 
 

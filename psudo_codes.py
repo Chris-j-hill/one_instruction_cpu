@@ -359,20 +359,26 @@ def  div_psudo_code(line):
     new_line += set_psudo_code(['SET', line[1], '#temp4'])
                                 
     return new_line
+   
 
 def sll_psudo_code(line):
     
-    print(int(line[2]))
     new_line = []
-    for i in range(int(line[2])):
-        new_line += add_psudo_code(['ADD', line[1], line[1]])
+    
+    new_line += set_psudo_code(['SET', '#temp4', line[2]])
+    new_line += sub_psudo_code(['SUB', '#temp4', '1'])                                                           
+    new_line += add_psudo_code(['ADD', line[1], line[1]])
+    new_line += jne_psudo_code(['JNE', '#temp4', '0', '_plus-19'])
 
     return new_line
 
 def srl_psudo_code(line):
     new_line = []
-    for i in range(int(line[2])):
-        new_line += div_psudo_code(['DIV', line[1], '2'])
+    new_line += set_psudo_code(['SET', '#temp5', '2'])
+    new_line += set_psudo_code(['SET', '#temp6', line[2]])                            
+    new_line += sub_psudo_code(['SUB', '#temp6', '1'])
+    new_line += sll_psudo_code(['SLL', '#temp5', '#temp6'])   #2^line[2]                            
+    new_line += div_psudo_code(['DIV', line[1], '#temp5'])
 
     return new_line
 

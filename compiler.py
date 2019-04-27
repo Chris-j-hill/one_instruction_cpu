@@ -6,6 +6,7 @@ import numpy as np
 from psudo_codes import (sub_psudo_code,
                         add_psudo_code,
                         set_psudo_code,
+                        inv_psudo_code,
                         halt_psudo_code,
                         jmp_psudo_code,
                         jle_psudo_code,
@@ -18,6 +19,9 @@ from psudo_codes import (sub_psudo_code,
                         div_psudo_code,
                         sll_psudo_code,
                         srl_psudo_code,
+                        and_psudo_code,
+                        or_psudo_code,
+                        not_psudo_code,
                         jump_ref)
                         
 
@@ -143,6 +147,8 @@ def replace_psudo_codes(instructions, labels):
             new_line = add_psudo_code(line)
         elif line[0] == "SET":
             new_line = set_psudo_code(line)
+        elif line[0] == "INV":
+            new_line = inv_psudo_code(line)
                     
         elif line[0] == "HALT":
             new_line = halt_psudo_code(line)
@@ -169,7 +175,12 @@ def replace_psudo_codes(instructions, labels):
             new_line = sll_psudo_code(line)
         elif line[0] == "SRL":
             new_line = srl_psudo_code(line)
-        
+        elif line[0] == "AND":
+            new_line = and_psudo_code(line)
+        elif line[0] == "OR":
+            new_line = or_psudo_code(line)
+        elif line[0] == "NOT":
+            new_line = not_psudo_code(line)
         
             
             

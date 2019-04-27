@@ -26,7 +26,10 @@ def add_psudo_code(line):
     """
     
     if is_value(line[2]):
-        line[2] = '-'+line[2]
+        if int(line[2]) <0:
+            line[2] = line[2].replace('-','')
+        elif int(line[2]) >0:
+            line[2] = '-'+line[2]
         line = sub_psudo_code(line)
 
     else:        
@@ -56,8 +59,11 @@ def set_psudo_code(line):
     
     #if we're writing a constant, it can be directly written to destingation zero doesnt need further code
     if is_value(line[2]):
-        if int(line[2])!=0:
-            line[2] = '-'+line[2]    #invert value to write
+        if int(line[2])!=0:    
+            if int(line[2]) <0:#invert value to write
+                line[2] = line[2].replace('-','')
+            elif int(line[2]) >0:
+                line[2] = '-'+line[2]
             new_line += sub_psudo_code(line) # set new value
                     
     elif is_value(line[2]) == False: # if its a variable add this    
@@ -67,6 +73,14 @@ def set_psudo_code(line):
         
     return new_line
     
+def inv_psudo_code(line):
+
+    new_line = []
+    new_line += set_psudo_code(['SET', '#temp0', '0'])
+    new_line += sub_psudo_code(['SUB','#temp0',line[1]])
+    new_line += set_psudo_code(['SET', line[1], '#temp0'])          
+    return new_line
+
 def halt_psudo_code(line):
     
     new_line = []
@@ -334,14 +348,22 @@ def mul_psudo_code(line):
     
     new_line = set_psudo_code(['SET', '#temp4', '0']) #set counter to 0
     new_line += set_psudo_code(['SET', '#temp5', '0']) # product ans
-                               
+    new_line += set_psudo_code(['SET', '#temp7', line[2]]) #to check if value is negaive
+    
+    new_line += jge_psudo_code(['JGE', '#temp7', '0', '_plus7']) #if line[2]>0 skip
+    new_line += inv_psudo_code(['INV','#temp7'])    #invert value                                
+    
     new_line += add_psudo_code(['ADD', '#temp4', '1'])       # increment counter
     new_line += add_psudo_code(['ADD', '#temp5', line[1]])   # add value to sum
     
-    new_line += set_psudo_code(['SET', '#temp6', line[2]]) # copy second value for comparision
-    new_line += jgt_psudo_code(['JGT', '#temp6', '#temp4', '_plus-19'])  # relative jump 
+    new_line += set_psudo_code(['SET', '#temp6', '#temp7']) # copy second value for comparision
+    new_line += jgt_psudo_code(['JGT', '#temp6', '#temp4', '_plus-21'])  # relative jump 
     
     new_line += set_psudo_code(['SET', line[1], '#temp5'])
+    
+    new_line += set_psudo_code(['SET', '#temp7', line[2]]) #if negative, invert answer
+    new_line += jge_psudo_code(['JGE', '#temp7', '0', '_plus7']) #if 0<line[2] skip
+    new_line += inv_psudo_code(['INV',line[1]])                               
                                 
     return new_line
 
@@ -382,7 +404,46 @@ def srl_psudo_code(line):
 
     return new_line
 
+
+def and_psudo_code(line):
+    """
+    return bitwise and of the two values 
     
+    """
+    
+    new_line = []
+    
+    new_line += set_psudo_code(['SET','#temp7', line[1]])
+    new_line += set_psudo_code(['SET','#temp8', line[2]])
+    new_line += set_psudo_code(['SET','#temp9', '0'])    #result
+                                
+    for i in range(0,32):
+        new_line += srl_psudo_code(['SRL', '#temp7', str(i)])   	# get rid of upper bits
+        new_line += srl_psudo_code(['SRL', '#temp8', str(i)])
+        new_line += sll_psudo_code(['SRL', '#temp7', str(32-i)]) # get rid of lower bits
+        new_line += sll_psudo_code(['SRL', '#temp8', str(32-i)])
+        
+        
+    return new_line
+
+def or_psudo_code(line):
+    """
+    return bitwise or of the two values 
+    
+    """
+    new_line = []
+    return new_line
+  
+
+
+def not_psudo_code(line):
+    """
+    return bitwise inversion of the value
+    
+    """
+    new_line = []
+    return new_line
+  
     
 def is_value(element):
     if element.isdigit():

@@ -1,4 +1,4 @@
-set a 256
-srl a 6
+set a 5
+mul a 4
 set return a
 halt

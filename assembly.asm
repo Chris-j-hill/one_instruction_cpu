@@ -1,4 +1,4 @@
-set a 17
-div a 0
+set a 3
+srl a 1
 set return a
 halt

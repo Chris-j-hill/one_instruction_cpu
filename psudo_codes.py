@@ -360,7 +360,24 @@ def  div_psudo_code(line):
                                 
     return new_line
 
+def sll_psudo_code(line):
+    
+    print(int(line[2]))
+    new_line = []
+    for i in range(int(line[2])):
+        new_line += add_psudo_code(['ADD', line[1], line[1]])
 
+    return new_line
+
+def srl_psudo_code(line):
+    new_line = []
+    for i in range(int(line[2])):
+        new_line += div_psudo_code(['DIV', line[1], '2'])
+
+    return new_line
+
+    
+    
 def is_value(element):
     if element.isdigit():
         return True

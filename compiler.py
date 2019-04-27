@@ -16,6 +16,8 @@ from psudo_codes import (sub_psudo_code,
                         jge_psudo_code,
                         mul_psudo_code,
                         div_psudo_code,
+                        sll_psudo_code,
+                        srl_psudo_code,
                         jump_ref)
                         
 
@@ -163,6 +165,10 @@ def replace_psudo_codes(instructions, labels):
             new_line = mul_psudo_code(line)
         elif line[0] == "DIV":
             new_line = div_psudo_code(line)
+        elif line[0] == "SLL":
+            new_line = sll_psudo_code(line)
+        elif line[0] == "SRL":
+            new_line = srl_psudo_code(line)
         
         
             

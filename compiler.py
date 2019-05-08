@@ -2,8 +2,8 @@
 
 
 import sys
-import numpy as np
 from psudo_codes import (sub_psudo_code,
+                         subj_psudo_code,
                         add_psudo_code,
                         set_psudo_code,
                         inv_psudo_code,
@@ -143,6 +143,8 @@ def replace_psudo_codes(instructions, labels):
         line = instructions[i]
         if line[0] == "SUB":
             new_line = sub_psudo_code(line)
+        elif line[0] == "SUBJ":
+            new_line = subj_psudo_code(line)
         elif line[0] == "ADD":
             new_line = add_psudo_code(line)
         elif line[0] == "SET":
@@ -498,3 +500,4 @@ def error_line(error_line):
     print("Error on line: ", error_line)
 
 main()
+

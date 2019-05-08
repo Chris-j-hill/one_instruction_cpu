@@ -1,4 +1,4 @@
-set a 5
-mul a 4
+set a 955
+and a 4520
 set return a
 halt

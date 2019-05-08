@@ -6,7 +6,9 @@ jump_ref = ['_next_addr', '_this_addr']
 
 def sub_psudo_code(line):
     return [line[1],line[2], jump_ref[0]]
-    
+
+def subj_psudo_code(line):   
+    return [line[1],line[2], line[3]]
     
 def add_psudo_code(line):
     """
@@ -162,7 +164,7 @@ def jlt_psudo_code(line):
     sub temp3 temp     # temp3 = 0
     sub temp3 temp     # temp3 = b
     
-    #add one to temp3 -> a<b == a<=(b-1)
+    #sub one from temp3 -> a<b == a<=(b-1)
     sub temp3 1
     
     #sub and jump
@@ -416,15 +418,51 @@ def and_psudo_code(line):
     new_line += set_psudo_code(['SET','#temp7', line[1]])
     new_line += set_psudo_code(['SET','#temp8', line[2]])
     new_line += set_psudo_code(['SET','#temp9', '0'])    #result
-                                
-    for i in range(0,32):
-        new_line += srl_psudo_code(['SRL', '#temp7', str(i)])   	# get rid of upper bits
-        new_line += srl_psudo_code(['SRL', '#temp8', str(i)])
-        new_line += sll_psudo_code(['SRL', '#temp7', str(32-i)]) # get rid of lower bits
-        new_line += sll_psudo_code(['SRL', '#temp8', str(32-i)])
+    #new_line += set_psudo_code(['SET','#zero', '0'])                             
+    for i in range(0,16):   
+    # for each loop, first check the value of the msb, by checking if value is negative
+    # if value is negative msb is 1, if both values are negative, set 
+    # then shift value left and add to running result
+     
+                                    
+        new_line += set_psudo_code(['SET','#temp10', '1'])  #result for this bit
         
+        new_line += set_psudo_code(['SET','#temp11', '#temp7']) # copy for comparison
+        new_line += set_psudo_code(['SET','#temp12', '#temp8'])                            
+
+        #if either value is less than zero, left most bit set, skip
+        #use built in jump function of alu rather than comparison operation
         
+        # if ((temp)<=-1 ) goto c
+        # if ((temp++)<=0 ) goto c   # case where temp was 0xffff
+                             
+        new_line += subj_psudo_code(['SUBJ', '#temp11', '0', '_plus4']) #<=0   -> negative but might be zero                           
+        new_line += subj_psudo_code(['SUBJ', '#temp11', '1', '_plus3'])#<=-1  -> definitely negative                             
+        new_line += sub_psudo_code(['SUB', '#temp11', '-1'])                             
+        new_line += subj_psudo_code(['SUBJ', '#zero', 'temp11', '_plus3 '])#>=0 must be zero                            
+                                             
+        # msb of val1 was 0 no need to compare futher 
+        new_line += sub_psudo_code(['SUB','#temp10', '1'])
+        new_line += jmp_psudo_code(['JMP', '_plus4'])   # jmp past further comparison                          
+        
+                
+        new_line += subj_psudo_code(['SUBJ', '#temp12', '0', '_plus3'])
+        new_line += subj_psudo_code(['SUBJ', '#temp12', '1', '_plus2'])
+        # msb of val2 was 0                           
+        new_line += sub_psudo_code(['SUB','#temp10', '1']) 
+                   
+        for j in range(15-i): #sll by i   
+            new_line += add_psudo_code(['ADD', '#temp10', '#temp10'])  
+               
+        new_line += add_psudo_code(['ADD', '#temp9', '#temp10'])    # and new value to running sum
+        
+        new_line += add_psudo_code(['ADD', '#temp7','#temp7']) # get rid of next upper bit
+        new_line += add_psudo_code(['ADD', '#temp8','#temp8'])  
+        
+                                    
+    new_line += set_psudo_code(['SET', line[1],'#temp9'])    #result                            
     return new_line
+
 
 def or_psudo_code(line):
     """
